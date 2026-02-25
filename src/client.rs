@@ -1,19 +1,18 @@
 //! FemtoClaw Client.
 
-use crate::{error::SdkError, types::*, Message, Response};
-use reqwest::Client;
-use std::sync::Arc;
+use crate::error::SdkError;
+use reqwest::Client as HttpClient;
 
-pub struct Client {
-    inner: Client,
+pub struct FemtoClient {
+    inner: HttpClient,
     base_url: String,
     api_key: Option<String>,
 }
 
-impl Client {
+impl FemtoClient {
     pub fn new(base_url: &str) -> Self {
         Self {
-            inner: Client::new(),
+            inner: HttpClient::new(),
             base_url: base_url.to_string(),
             api_key: None,
         }
@@ -24,7 +23,7 @@ impl Client {
         self
     }
 
-    pub async fn send_message(&self, message: &str) -> Result<Response, SdkError> {
+    pub async fn send_message(&self, message: &str) -> Result<crate::types::Response, SdkError> {
         let url = format!("{}/v1/chat", self.base_url);
         
         let request = serde_json::json!({
@@ -40,7 +39,7 @@ impl Client {
             req = req.header("Authorization", format!("Bearer {}", key));
         }
 
-        let response = req.send().await?;
+        let response: reqwest::Response = req.send().await?;
 
         if !response.status().is_success() {
             return Err(SdkError::Api(response.status().to_string()));
@@ -58,7 +57,7 @@ impl Client {
             "args": args
         });
 
-        let response = self.inner.post(&url).json(&request).send().await?;
+        let response: reqwest::Response = self.inner.post(&url).json(&request).send().await?;
 
         if !response.status().is_success() {
             return Err(SdkError::Api(response.status().to_string()));
